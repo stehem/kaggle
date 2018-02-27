@@ -65,13 +65,10 @@ def clean_text(text):
 def get_processed_train_valid_test():
     train_csv = pd.read_csv("%s/%s" % (KAGGLE_HOME, "train.csv"), sep =',', encoding='utf8')
     test_csv  = pd.read_csv("%s/%s" % (KAGGLE_HOME, "test.csv"), sep =',', encoding='utf8')
-
     x = train_csv.comment_text
     y = train_csv.iloc[:,2:]
     xtest = test_csv.comment_text
-
     xtrain, xvalid, ytrain, yvalid = train_test_split(x, y, test_size=0.1, random_state=42, stratify=y[["toxic", "obscene","insult", "severe_toxic", "identity_hate"]])
-
     xtrain = xtrain.apply(lambda text: clean_text(text))
     xvalid = xvalid.apply(lambda text: clean_text(text))
     xtest = xtest.apply(lambda text: clean_text(text))
@@ -95,13 +92,10 @@ VOCAB_SIZE = len(tokenizer.word_index)
 def get_encoded_xtrain_xvalid_xtest():
     train_encoded_docs = tokenizer.texts_to_sequences(xtrain)
     train_padded_docs = pad_sequences(train_encoded_docs, maxlen=MAX_LENGTH, padding='post')
-
     valid_encoded_docs = tokenizer.texts_to_sequences(xvalid)
     valid_padded_docs = pad_sequences(valid_encoded_docs, maxlen=MAX_LENGTH, padding='post')
-
     test_encoded_docs = tokenizer.texts_to_sequences(xtest)
     test_padded_docs = pad_sequences(test_encoded_docs, maxlen=MAX_LENGTH, padding='post')
-
     return train_padded_docs, valid_padded_docs, test_padded_docs
 
 
@@ -136,7 +130,7 @@ def show_model_history(his):
 
 def generate_submission(model):
     test_csv = pd.read_csv("%s/%s" % (KAGGLE_HOME, "test.csv"), sep =',', encoding='utf8')
-    df = pd.DataFrame(test_csv['id'], columns = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"])
+    df = pd.DataFrame(test_csv['id'])
     submission_predictions = model.predict(test_padded_docs)
     df = pd.concat([df,pd.DataFrame(submission_predictions)],axis=1,join_axes=[df.index])
     df.to_csv("%s/%s" % (KAGGLE_HOME, "submit.csv"), index = False)

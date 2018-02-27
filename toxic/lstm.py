@@ -10,8 +10,9 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Embedding
 from keras.layers import Dense, Input, Flatten
 from keras.models import Model
+from keras.layers import Dropout
 from sklearn import metrics
-from keras.layers import Bidirectional, GlobalMaxPool1D
+from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU
 
 
 import embeddings
@@ -24,11 +25,11 @@ embedding_layer = Embedding(embeddings.VOCAB_SIZE, embeddings.EMBEDDINGS_SIZE, w
 sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
-layer = LSTM(100)(embedded_sequences)
+layer = CuDNNGRU(200, return_sequences=True)(embedded_sequences)
+layer = CuDNNGRU(200)(layer)
 
-
-
-
+layer = Dense(100)(layer)
+layer = Dropout(0.3)(layer)
 preds = Dense(6, activation='sigmoid')(layer)
 model = Model(sequence_input, preds)
 
@@ -47,6 +48,5 @@ embeddings.print_roc_auc(model, embeddings.valid_padded_docs, embeddings.yvalid)
 embeddings.show_model_history(history)
 
 
-
-
-
+generate_submission(model)
+ #id,toxic,severe_toxic,obscene,threat,insult,identity_hate
