@@ -24,8 +24,10 @@ embedding_layer = Embedding(embeddings.VOCAB_SIZE, embeddings.EMBEDDINGS_SIZE, w
 
 sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
+layer = Dropout(0.3)(embedded_sequences)
 
-layer = CuDNNGRU(200, return_sequences=True)(embedded_sequences)
+layer = CuDNNGRU(200, return_sequences=True)(layer)
+layer = CuDNNGRU(200, return_sequences=True)(layer)
 layer = CuDNNGRU(200)(layer)
 
 layer = Dense(100)(layer)
