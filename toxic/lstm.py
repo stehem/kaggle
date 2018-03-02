@@ -12,8 +12,7 @@ from keras.layers import Dense, Input, Flatten
 from keras.models import Model
 from keras.layers import Dropout, SpatialDropout1D
 from sklearn import metrics
-from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU, GlobalAveragePooling1D
-from keras import regularizers
+from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU, GlobalAveragePooling1D, concatenate
 
 
 import embeddings
@@ -25,10 +24,12 @@ embedding_layer = Embedding(embeddings.VOCAB_SIZE, embeddings.EMBEDDINGS_SIZE, w
 
 sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-layer = SpatialDropout1D(0.5)(embedded_sequences)
+layer = SpatialDropout1D(0.2)(embedded_sequences)
 
-layer = CuDNNGRU(384, return_sequences=True)(layer)
-layer = GlobalAveragePooling1D()(layer)
+layer = CuDNNGRU(200, return_sequences=True)(layer)
+avg_pool = GlobalAveragePooling1D()(layer)
+max_pool = GlobalMaxPool1D()(layer)
+layer = concatenate([avg_pool, max_pool])
 
 preds = Dense(6, activation='sigmoid')(layer)
 model = Model(sequence_input, preds)
