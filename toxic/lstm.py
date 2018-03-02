@@ -10,7 +10,7 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Embedding
 from keras.layers import Dense, Input, Flatten
 from keras.models import Model
-from keras.layers import Dropout
+from keras.layers import Dropout, SpatialDropout1D
 from sklearn import metrics
 from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU
 
@@ -24,9 +24,8 @@ embedding_layer = Embedding(embeddings.VOCAB_SIZE, embeddings.EMBEDDINGS_SIZE, w
 
 sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-layer = Dropout(0.4)(embedded_sequences)
+layer = SpatialDropout1D(0.3)(embedded_sequences)
 
-layer = CuDNNGRU(200, return_sequences=True)(layer)
 layer = CuDNNGRU(200, return_sequences=True)(layer)
 layer = CuDNNGRU(200)(layer)
 

@@ -130,10 +130,17 @@ def show_model_history(his):
 
 def generate_submission(model):
     test_csv = pd.read_csv("%s/%s" % (KAGGLE_HOME, "test.csv"), sep =',', encoding='utf8')
-    df = pd.DataFrame(test_csv['id'])
-    submission_predictions = model.predict(test_padded_docs)
-    df = pd.concat([df,pd.DataFrame(submission_predictions)],axis=1,join_axes=[df.index])
-    df.to_csv("%s/%s" % (KAGGLE_HOME, "submit.csv"), index = False)
+    predictions = model.predict(test_padded_docs)
+    submission = pd.DataFrame({
+        'id': test_csv['id'],
+        'toxic': predictions[:, 0],
+        'severe_toxic': predictions[:, 1],
+        'obscene': predictions[:, 2],
+        'threat': predictions[:, 3],
+        'insult': predictions[:, 4],
+        'identity_hate': predictions[:, 5],
+    })
+    submission.to_csv("%s/%s" % (KAGGLE_HOME, "submit.csv"), index = False)
 
 
 def print_roc_auc(model, xvalid, yvalid):
