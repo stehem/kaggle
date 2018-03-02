@@ -12,7 +12,7 @@ from keras.layers import Dense, Input, Flatten
 from keras.models import Model
 from keras.layers import Dropout, SpatialDropout1D
 from sklearn import metrics
-from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU
+from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU, GlobalAveragePooling1D
 
 
 import embeddings
@@ -27,10 +27,8 @@ embedded_sequences = embedding_layer(sequence_input)
 layer = SpatialDropout1D(0.3)(embedded_sequences)
 
 layer = CuDNNGRU(200, return_sequences=True)(layer)
-layer = CuDNNGRU(200)(layer)
+layer = GlobalAveragePooling1D()(layer)
 
-layer = Dense(100)(layer)
-layer = Dropout(0.3)(layer)
 preds = Dense(6, activation='sigmoid')(layer)
 model = Model(sequence_input, preds)
 
