@@ -27,7 +27,7 @@ sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 layer = SpatialDropout1D(0.5)(embedded_sequences)
 
-layer = CuDNNGRU(200, return_sequences=True)(layer)
+layer = CuDNNGRU(384, return_sequences=True)(layer)
 layer = GlobalAveragePooling1D()(layer)
 
 preds = Dense(6, activation='sigmoid')(layer)
