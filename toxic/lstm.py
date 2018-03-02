@@ -13,6 +13,7 @@ from keras.models import Model
 from keras.layers import Dropout, SpatialDropout1D
 from sklearn import metrics
 from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU, GlobalAveragePooling1D
+from keras import regularizers
 
 
 import embeddings
@@ -24,7 +25,7 @@ embedding_layer = Embedding(embeddings.VOCAB_SIZE, embeddings.EMBEDDINGS_SIZE, w
 
 sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-layer = SpatialDropout1D(0.3)(embedded_sequences)
+layer = SpatialDropout1D(0.5)(embedded_sequences)
 
 layer = CuDNNGRU(200, return_sequences=True)(layer)
 layer = GlobalAveragePooling1D()(layer)
@@ -35,7 +36,7 @@ model = Model(sequence_input, preds)
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-EPOCHS=5
+EPOCHS=7
 
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=1, verbose=1, mode='auto')
 
