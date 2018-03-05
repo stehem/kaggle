@@ -18,18 +18,17 @@ from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU, GlobalAverage
 import embeddings
 
 
-embedding_layer = Embedding(embeddings.VOCAB_SIZE, embeddings.EMBEDDINGS_SIZE, weights=[embeddings.get_embedding_matrix()], input_length=embeddings.MAX_LENGTH, trainable=False)
+# Embedding and GRU
+
 
 #
 
 sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
-embedded_sequences = embedding_layer(sequence_input)
-layer = SpatialDropout1D(0.2)(embedded_sequences)
+layer = Embedding(embeddings.VOCAB_SIZE, 200,input_shape=(embeddings.MAX_LENGTH,))(sequence_input)
+layer = SpatialDropout1D(0.1)(layer)
 
-layer = CuDNNGRU(200, return_sequences=True)(layer)
-avg_pool = GlobalAveragePooling1D()(layer)
-max_pool = GlobalMaxPool1D()(layer)
-layer = concatenate([avg_pool, max_pool])
+layer = Bidirectional(CuDNNGRU(100, return_sequences=True))(layer)
+layer = GlobalAveragePooling1D()(layer)
 
 preds = Dense(6, activation='sigmoid')(layer)
 model = Model(sequence_input, preds)
@@ -37,7 +36,7 @@ model = Model(sequence_input, preds)
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-EPOCHS=7
+EPOCHS=2
 
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=1, verbose=1, mode='auto')
 
@@ -49,5 +48,5 @@ embeddings.print_roc_auc(model, embeddings.valid_padded_docs, embeddings.yvalid)
 embeddings.show_model_history(history)
 
 
-generate_submission(model)
+embeddings.generate_submission(model)
  #id,toxic,severe_toxic,obscene,threat,insult,identity_hate

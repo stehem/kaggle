@@ -17,7 +17,8 @@ from keras.preprocessing.text import text_to_word_sequence
 from sklearn import metrics
 
 KAGGLE_HOME=os.environ['KAGGLE_HOME']
-MAX_LENGTH = 200
+MAX_LENGTH = 100
+MAX_FEATURES = 35000
 
 
 def generate_embeddings_index():
@@ -49,7 +50,8 @@ EMBEDDINGS_INDEX=load_embeddings_index()
 
 
 def keep_word(word):
-    return word not in stop_words and EMBEDDINGS_INDEX.get(word) is not None
+    #return word not in stop_words and EMBEDDINGS_INDEX.get(word) is not None
+    return True
 
 def filter_sequence(sequence):
     return [word for word in sequence if keep_word(word)]
@@ -79,7 +81,7 @@ def get_processed_train_valid_test():
 xtrain, xvalid, xtest, ytrain, yvalid = get_processed_train_valid_test()
 
 def get_tokenizer(docs):
-    t = Tokenizer(lower=True)
+    t = Tokenizer(lower=True, num_words=MAX_FEATURES)
     t.fit_on_texts(docs)
     return t
 
