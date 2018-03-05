@@ -27,7 +27,7 @@ sequence_input = Input(shape=(embeddings.MAX_LENGTH,), dtype='int32')
 layer = Embedding(embeddings.VOCAB_SIZE, 200,input_shape=(embeddings.MAX_LENGTH,))(sequence_input)
 layer = SpatialDropout1D(0.2)(layer)
 
-layer = Bidirectional(CuDNNGRU(100, return_sequences=True))(layer)
+layer = Bidirectional(CuDNNGRU(150, return_sequences=True))(layer)
 layer = GlobalAveragePooling1D()(layer)
 
 preds = Dense(6, activation='sigmoid')(layer)
