@@ -1,0 +1,187 @@
+#!/usr/bin/python3
+
+
+import pandas as pd
+import numpy as np
+import csv
+import xgboost as xgb
+import spacy
+import Stemmer
+import re
+import matplotlib.pyplot as plt
+
+
+from sklearn.feature_extraction.text import TfidfVectorizer,CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
+from sklearn import preprocessing, decomposition, model_selection, metrics, pipeline
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.svm import SVC,LinearSVC
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.metrics import log_loss
+from nltk import word_tokenize          
+from nltk.stem import WordNetLemmatizer 
+from nltk.stem.porter import PorterStemmer
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold
+from nltk.corpus import stopwords
+stop_words = stopwords.words('english')
+from numpy import zeros
+from keras.preprocessing.text import text_to_word_sequence
+from imblearn.under_sampling import RandomUnderSampler 
+from skift import IdxBasedFtClassifier
+#####################
+#####################
+
+train_csv = pd.read_csv('train.csv', sep =',', encoding='utf8')
+test_csv = pd.read_csv('test.csv', sep =',', encoding='utf8')
+
+train_csv_y = train_csv.iloc[:,2:]
+
+
+stemmer = Stemmer.Stemmer('en')
+
+misspellings_dict = {}
+fixed_count = 0
+
+with open("misspellings3") as f:
+    lines = f.readlines()
+    lines = [x.strip() for x in lines] 
+
+for line in lines:
+    split = line.split("->")
+    if len(split) == 2:
+        mis = split[0]
+        correct = split[1]
+        misspellings_dict[mis] = correct
+
+def fix_word(word):
+    global fixed_count
+    if word in misspellings_dict:
+        fixed_count += 1
+        return misspellings_dict[word]
+    return word
+
+
+def keep_word(word):
+    #return word not in stop_words and word.isalpha()
+    return word.isalpha()
+
+def clean_word(word):
+    misspelled = fix_word(word)
+    min_length = re.sub(r'\b\w{1,2}\b', '', stemmer.stemWord(misspelled))
+    no_numbers = re.sub(r'\w*\d\w*', '', min_length).strip()
+    return no_numbers.replace('\n', ' ').lower()
+
+def filter_sequence(sequence):
+    return [clean_word(word) for word in sequence if keep_word(word)]
+
+def sequence_to_text(sequence):
+    return " ".join(sequence)
+
+def clean_text(text):
+    return sequence_to_text(filter_sequence(text_to_word_sequence(text)))
+
+
+train_csv["comment_text"] = train_csv.comment_text.apply(lambda text: clean_text(text))
+test_csv["comment_text"] = test_csv.comment_text.apply(lambda text: clean_text(text))
+print("fixed : ", fixed_count)
+
+
+
+
+model_params = {"input_ix": 1, "thread": 24, "loss": "softmax", "lr": 0.1, "epoch": 20, "dim": 50, "wordNgrams": 2, "minCount": 4, "minn": 2, "ws": 5}
+cols = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
+def train_model(submit=False, cols=cols, model_params=model_params):
+    all_predictions = []
+    rocs = {}
+    train = train_csv
+    for column in cols:
+        non_offensive_indices = train.loc[train[column] == 0].index.values
+        offensive_indices = train.loc[train[column] == 1].index.values
+    if not submit:
+        train_non_offensive_indices, valid_non_offensive_indices = train_test_split(non_offensive_indices, test_size=0.1, random_state=42)
+        train_offensive_indices, valid_offensive_indices = train_test_split(offensive_indices, test_size=0.1, random_state=42)
+        adjusted_valid_non_offensive_indices = train_csv.loc[valid_non_offensive_indices].sample(len(valid_offensive_indices),random_state=42).index.values
+        valid = train_csv.loc[valid_offensive_indices].append(train_csv.loc[adjusted_valid_non_offensive_indices])
+    else:
+        train_non_offensive_indices, valid_non_offensive_indices = train_test_split(non_offensive_indices, test_size=0.0, random_state=42)
+        train_offensive_indices, valid_offensive_indices = train_test_split(offensive_indices, test_size=0.0, random_state=42)
+        valid = train_csv
+    #
+    def chunkify(lst,n):
+        return [lst[i::n] for i in range(n)]
+    #
+    number_of_chunks = round(len(train_non_offensive_indices) / len(train_offensive_indices))
+    if number_of_chunks > 100:
+        number_of_chunks = 100
+    print("number_of_chunks", number_of_chunks)
+    chunks = chunkify(train_non_offensive_indices, number_of_chunks)
+    #
+    offensive_rows = train.loc[train_offensive_indices]
+    #
+    model_preds = []
+    for chunk in chunks:
+        train_chunk = train.loc[chunk]
+        train_chunk_all = train_chunk.append(offensive_rows)
+        sk_clf = IdxBasedFtClassifier(**model_params)
+        #sk_clf = IdxBasedFtClassifier(input_ix=1, epoch=epochs)
+        sk_clf.fit(train_chunk_all, train_chunk_all[column])
+        #
+        valid_preds_raw = sk_clf.predict_proba(valid)
+        valid_preds = [pred[1] for pred in valid_preds_raw]
+        model_preds.append(valid_preds)
+    #
+    mean_preds = np.array(model_preds).mean(axis=0)
+    all_predictions.append(mean_preds)
+    if not submit: 
+        roc = metrics.roc_auc_score(valid[column], mean_preds)
+        rocs[column] = roc
+        print("ROC: ", rocs)
+    else:
+        submission = pd.DataFrame({
+            'id': test_csv['id'],
+            'toxic': all_predictions[0],
+            'severe_toxic': all_predictions[1],
+            'obscene': all_predictions[2],
+            'threat': all_predictions[3],
+            'insult': all_predictions[4],
+            'identity_hate': all_predictions[5],
+        })
+        submission.to_csv("submit.csv", index = False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

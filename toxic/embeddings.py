@@ -18,7 +18,8 @@ from sklearn import metrics
 
 KAGGLE_HOME=os.environ['KAGGLE_HOME']
 MAX_LENGTH = 100
-MAX_FEATURES = 35000
+MAX_FEATURES = 30000
+EMBEDDINGS_SIZE=300
 
 
 def generate_embeddings_index():
@@ -50,8 +51,7 @@ EMBEDDINGS_INDEX=load_embeddings_index()
 
 
 def keep_word(word):
-    #return word not in stop_words and EMBEDDINGS_INDEX.get(word) is not None
-    return True
+    return word not in stop_words
 
 def filter_sequence(sequence):
     return [word for word in sequence if keep_word(word)]
@@ -88,7 +88,6 @@ def get_tokenizer(docs):
 
 docs = list(xtrain) + list(xvalid) + list(xtest)
 tokenizer = get_tokenizer(docs)
-VOCAB_SIZE = len(tokenizer.word_index)
 
 
 def get_encoded_xtrain_xvalid_xtest():
@@ -104,18 +103,15 @@ def get_encoded_xtrain_xvalid_xtest():
 train_padded_docs, valid_padded_docs, test_padded_docs = get_encoded_xtrain_xvalid_xtest()
 
 
-EMBEDDINGS_SIZE=300
 	
 def get_embedding_matrix():
-    embedding_matrix = zeros((VOCAB_SIZE, EMBEDDINGS_SIZE))
+    embedding_matrix = zeros((MAX_FEATURES, EMBEDDINGS_SIZE))
     for word, i in list(tokenizer.word_index.items()):
+        if i >= MAX_FEATURES:
+            continue
         embedding_vector = EMBEDDINGS_INDEX.get(word)
-        if i == 1:
-            print("word: %s  index %d" % (word, i-1))
         if embedding_vector is not None:
-            embedding_matrix[i-1] = embedding_vector
-        else:
-            print("Missing: %s" % (word))
+            embedding_matrix[i] = embedding_vector
     return embedding_matrix
 
 
