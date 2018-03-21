@@ -15,8 +15,7 @@ from sklearn import metrics
 from keras.layers import Bidirectional, GlobalMaxPool1D, CuDNNGRU, GlobalAveragePooling1D, concatenate
 
 
-import embeddings
-
+import embeddings 
 
 # Embedding and GRU
 

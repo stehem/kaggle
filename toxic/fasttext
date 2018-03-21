@@ -8,6 +8,8 @@ import xgboost as xgb
 import spacy
 import Stemmer
 import re
+import os
+import itertools
 import matplotlib.pyplot as plt
 
 
@@ -33,13 +35,16 @@ from nltk.corpus import stopwords
 stop_words = stopwords.words('english')
 from numpy import zeros
 from keras.preprocessing.text import text_to_word_sequence
-from imblearn.under_sampling import RandomUnderSampler 
 from skift import IdxBasedFtClassifier
+from collections import OrderedDict
 #####################
 #####################
 
-train_csv = pd.read_csv('train.csv', sep =',', encoding='utf8')
-test_csv = pd.read_csv('test.csv', sep =',', encoding='utf8')
+KAGGLE_HOME = os.environ['KAGGLE_HOME']
+
+
+train_csv = pd.read_csv( "%s/%s" % (KAGGLE_HOME, "/toxic/train.csv"), sep=',', encoding='utf8')
+test_csv  = pd.read_csv( "%s/%s" % (KAGGLE_HOME, "/toxic/test.csv"), sep=',', encoding='utf8')
 
 train_csv_y = train_csv.iloc[:,2:]
 
@@ -49,7 +54,7 @@ stemmer = Stemmer.Stemmer('en')
 misspellings_dict = {}
 fixed_count = 0
 
-with open("misspellings3") as f:
+with open("%s/%s" % (KAGGLE_HOME,"misspellings3")) as f:
     lines = f.readlines()
     lines = [x.strip() for x in lines] 
 
@@ -69,8 +74,8 @@ def fix_word(word):
 
 
 def keep_word(word):
-    #return word not in stop_words and word.isalpha()
-    return word.isalpha()
+    return word not in stop_words and word.isalpha()
+    
 
 def clean_word(word):
     misspelled = fix_word(word)
@@ -95,7 +100,7 @@ print("fixed : ", fixed_count)
 
 
 
-model_params = {"input_ix": 1, "thread": 24, "loss": "softmax", "lr": 0.1, "epoch": 20, "dim": 50, "wordNgrams": 2, "minCount": 4, "minn": 2, "ws": 5}
+model_params = {"input_ix": 1, "lr": 0.07, "epoch": 5, "dim": 40, "minCount": 2}
 cols = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
 def train_model(submit=False, cols=cols, model_params=model_params):
     all_predictions = []
@@ -107,7 +112,7 @@ def train_model(submit=False, cols=cols, model_params=model_params):
     if not submit:
         train_non_offensive_indices, valid_non_offensive_indices = train_test_split(non_offensive_indices, test_size=0.1, random_state=42)
         train_offensive_indices, valid_offensive_indices = train_test_split(offensive_indices, test_size=0.1, random_state=42)
-        adjusted_valid_non_offensive_indices = train_csv.loc[valid_non_offensive_indices].sample(len(valid_offensive_indices),random_state=42).index.values
+        adjusted_valid_non_offensive_indices = train_csv.loc[valid_non_offensive_indices].sample(len(valid_offensive_indices),random_state=43).index.values
         valid = train_csv.loc[valid_offensive_indices].append(train_csv.loc[adjusted_valid_non_offensive_indices])
     else:
         train_non_offensive_indices, valid_non_offensive_indices = train_test_split(non_offensive_indices, test_size=0.0, random_state=42)
@@ -126,7 +131,8 @@ def train_model(submit=False, cols=cols, model_params=model_params):
     offensive_rows = train.loc[train_offensive_indices]
     #
     model_preds = []
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks):
+        print("Chunk: ",  idx)
         train_chunk = train.loc[chunk]
         train_chunk_all = train_chunk.append(offensive_rows)
         sk_clf = IdxBasedFtClassifier(**model_params)
@@ -153,35 +159,45 @@ def train_model(submit=False, cols=cols, model_params=model_params):
             'insult': all_predictions[4],
             'identity_hate': all_predictions[5],
         })
-        submission.to_csv("submit.csv", index = False)
+        submission.to_csv("%s/%s" % (KAGGLE_HOME, "/toxic/submit.csv"), index = False)
+
+
+
+def grid_search():
+    column = "toxic"
+    params = {"lr": [0.07], "epoch": [5], "dim": [40], "minCount": [2]}
+    keys, values = zip(*params.items())
+    experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    print("Number of experiments: ", len(experiments))
+    non_offensive_indices = train_csv.loc[train_csv[column] == 0].index.values
+    offensive_indices = train_csv.loc[train_csv[column] == 1].index.values
+    train_non_offensive_indices, valid_non_offensive_indices = train_test_split(non_offensive_indices, test_size=0.1, random_state=42)
+    train_offensive_indices, valid_offensive_indices = train_test_split(offensive_indices, test_size=0.1, random_state=42)
+    adjusted_train_non_offensive_indices = train_csv.loc[train_non_offensive_indices].sample(len(train_offensive_indices),random_state=43).index.values
+    adjusted_valid_non_offensive_indices = train_csv.loc[valid_non_offensive_indices].sample(len(valid_offensive_indices),random_state=43).index.values
+    train = train_csv.loc[train_offensive_indices].append(train_csv.loc[adjusted_train_non_offensive_indices])
+    valid = train_csv.loc[valid_offensive_indices].append(train_csv.loc[adjusted_valid_non_offensive_indices])
+    #
+    rocs = {}
+    for idx, param_set in enumerate(experiments):
+        print("Experiment: ", idx)
+        sk_clf = IdxBasedFtClassifier(input_ix=1, **param_set)
+        sk_clf.fit(train, train[column])
+        #
+        valid_preds_raw = sk_clf.predict_proba(valid)
+        roc = metrics.roc_auc_score(valid[column], [x[1] for x in valid_preds_raw])
+        print("ROC: ", roc)
+        rocs[str(param_set)] = roc
+    return rocs
+
+
+rocs = grid_search()
+ordered_rocs = OrderedDict(sorted(rocs.items(), key=lambda kv: kv[1], reverse=True))
+ordered_rocs 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+"""
+OrderedDict([("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 4, 'dim': 50}", 0.9647823486693152), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 3, 'dim': 50}", 0.9646251441753173), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 1, 'dim': 50}", 0.9646234354308172), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 2, 'dim': 100}", 0.9646016489384424), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 2, 'dim': 50}", 0.9645896877269428), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 1, 'dim': 300}", 0.9645179204579435), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 3, 'dim': 100}", 0.9645055320603186), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 3, 'dim': 200}", 0.9644974155239439), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 1, 'minCount': 2, 'dim': 50}", 0.9644905805459438), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 2, 'dim': 200}", 0.9643923277371952), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 3, 'dim': 200}", 0.9643897646204452), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 2, 'dim': 300}", 0.9643513178691956), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 4, 'dim': 100}", 0.9643286770045708), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 2, 'dim': 200}", 0.9643237643641335), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 3, 'dim': 300}", 0.9643092400358837), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 2, 'dim': 50}", 0.9643083856636336), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 1, 'minCount': 1, 'dim': 50}", 0.9643071041052587), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 1, 'minCount': 3, 'dim': 200}", 0.9642966380451963), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 1, 'dim': 200}", 0.9642910846255712), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 1, 'minCount': 2, 'dim': 300}", 0.9642851040198215), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 1, 'minCount': 4, 'dim': 300}", 0.9642733564013841), ("{'lr': 0.05, 'epoch': 5, 'wordNgrams': 1, 'minCount': 1, 'dim': 100}", 0.9642718612499466), ("{'lr': 0.1, 'epoch': 5, 'wordNgrams': 2, 'minCount': 2, 'dim': 100}",
+"""
