@@ -13,6 +13,7 @@ from skopt import gp_minimize
 from sklearn import linear_model
 from yellowbrick.regressor import ResidualsPlot
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import KFold
 
 train = pd.read_csv('train.csv')
 
@@ -37,14 +38,16 @@ def remove_zero_columns(x, submit):
 
 
 x, x_submit = remove_zero_columns(x, x_submit)
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.25, random_state = 0)
 
-
-lgtrain = lgbm.Dataset(x_train, label=y_train)
-lgval = lgbm.Dataset(x_test, label=y_test)
-
-#[0.00542047893814942, 29, 24, 0.39949465609514856, 1, 0.67943500, 10]
-params = {
+model_preds = []
+kf = KFold(n_splits=4)
+for train_index, test_index in kf.split(x):
+    print("TRAIN:", train_index, "TEST:", test_index)
+    x_train, x_test = x.loc[train_index], x.loc[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    lgtrain = lgbm.Dataset(x_train, label=y_train)
+    lgval = lgbm.Dataset(x_test, label=y_test)
+    params = {
         "num_threads": 8,
         "verbosity": -1,
         "zero_as_missing": "true",
@@ -59,19 +62,20 @@ params = {
         "bagging_freq": 1,
         "feature_fraction": 0.68,
         "lambda_l1": 10,
-}
-
-
-evals_result = {}
-model_lgb = lgbm.train(params, lgtrain, 5000, 
+    }
+    evals_result = {}
+    model_lgb = lgbm.train(params, lgtrain, 5000, 
                       valid_sets=[lgval], 
                       early_stopping_rounds=100, 
                       verbose_eval=50, 
                       evals_result=evals_result)
+    model_preds.append(np.expm1(model_lgb.predict(x_submit)))
 
 
 
-lg_preds = pd.DataFrame(np.expm1(model_lgb.predict(x_submit)))
+
+
+lg_preds = pd.DataFrame(np.array(model_preds).mean(axis=0))
 lg_preds.insert(0, "ID", ids.values)
 lg_preds.columns = ["ID","target"]
 
@@ -183,14 +187,74 @@ m_preds.to_csv("submit.csv", index = False)
 
 x_lg = x.iloc[0:2229,]
 x_xg = x.iloc[2230:,]
-y_lg = y.iloc[0:2229,]
-y_xg = y.iloc[2230:,]
+y_lg = y[0:2229,]
+y_xg = y[2230:,]
 
 x_train_lg, x_test_lg, y_train_lg, y_test_lg = train_test_split(x_lg, y_lg, test_size = 0.10, random_state = 0)
 x_train_xg, x_test_xg, y_train_xg, y_test_xg = train_test_split(x_xg, y_xg, test_size = 0.10, random_state = 0)
+x_test_all = pd.DataFrame()
+x_test_all = x_test_all.append(x_test_lg)
+x_test_all = x_test_all.append(x_test_xg)
+y_test_all = np.concatenate((y_test_lg,y_test_xg))
 
 
 
+lgtrain = lgbm.Dataset(x_train_lg, label=y_train_lg)
+lgval = lgbm.Dataset(x_test_lg, label=y_test_lg)
+params = {
+        "num_threads": 8,
+        "verbosity": -1,
+        "zero_as_missing": "true",
+        "boosting":'gbdt',
+        "objective" : "regression",
+        "metric" : "rmse",
+        "seed": 42,
+        "learning_rate" : 0.005,
+        "num_leaves": 29,
+        "max_depth" : 24,
+        "bagging_fraction": 0.4,
+        "bagging_freq": 1,
+        "feature_fraction": 0.68,
+        "lambda_l1": 10,
+}
+evals_result = {}
+model_lgb = lgbm.train(params, lgtrain, 5000, 
+                      valid_sets=[lgval], 
+                      early_stopping_rounds=100, 
+                      verbose_eval=50, 
+                      evals_result=evals_result)
+lg_preds = np.expm1(model_lgb.predict(x_test_all))
+#
+params = {
+        'objective': 'reg:linear',
+        'booster': 'gbtree',
+        'learning_rate': 0.006,
+        'max_depth': 20,
+        'min_child_weight': 14,
+        'subsample': 0.55,
+        'colsample_bytree': 0.45,
+        'n_jobs': -1,
+        'random_state': 456,
+	'silent': True
+}
+tr_data = xgb.DMatrix(x_train_xg, y_train_xg)
+va_data = xgb.DMatrix(x_test_xg, y_test_xg)
+watchlist = [(tr_data, 'train'), (va_data, 'valid')]
+model_xgb = xgb.train(params, tr_data, 2000, watchlist, maximize=False, early_stopping_rounds = 100, verbose_eval=100)
+dtest = xgb.DMatrix(x_test_all)
+xg_preds = np.expm1(model_xgb.predict(dtest, ntree_limit=model_xgb.best_ntree_limit))
+#
+features = np.array([lg_preds, xg_preds]).T
+y_test = np.expm1(y_test_all)
+clf = RandomForestRegressor()
+clf.fit(features, y_test)
+#now get predict feature to feed the meta clf
+lg_preds_sub = np.expm1(model_lgb.predict(x_submit))
+xg_preds_sub = np.expm1(model_xgb.predict(xgb.DMatrix(x_submit), ntree_limit=model_xgb.best_ntree_limit))
+m_preds = pd.DataFrame(clf.predict(np.array([lg_preds_sub, xg_preds_sub]).T))
+m_preds.insert(0, "ID", ids.values)
+m_preds.columns = ["ID","target"]
+m_preds.to_csv("submit.csv", index = False)
 
 
 
@@ -269,7 +333,7 @@ space  = [
 #bayesian optimization
 def find_hyper_params_xgb(values):
     params = {
-        'learning_rate': values[0]
+        'learning_rate': values[0],
         'max_depth': values[1],
         'min_child_weight': values[2],
         'subsample': values[3],
