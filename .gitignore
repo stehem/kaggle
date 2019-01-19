@@ -2,6 +2,7 @@
 *.zip
 *.dot
 *.obj
+*.tmp
 
 coursera_aml_cds/concatenated
 coursera_aml_cds/optimized_X
