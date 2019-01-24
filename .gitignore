@@ -7,5 +7,6 @@
 coursera_aml_cds/concatenated
 coursera_aml_cds/optimized_X
 coursera_aml_cds/training
+coursera_aml_cds/core
 
 *.gz
