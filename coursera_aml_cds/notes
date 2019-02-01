@@ -1,0 +1,20 @@
+Week1
+label encoding/frequency encoding for cat variables
+    feature combination usually more useful for non tree based methods
+    label and frequency encoding often used for tree based methods
+    one hot for non tree based
+    interaction for linear and knns
+
+datetime features
+    periodicity
+    time since
+    difference between dates
+
+missing values
+    for tree add isnull bool column
+    in general avoid filling nans before feature generation
+
+
+Week2
+validation strategies
+    use stratification
