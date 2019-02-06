@@ -10,3 +10,5 @@ coursera_aml_cds/training
 coursera_aml_cds/core
 
 *.gz
+
+coursera_aml_cds/pickled/*
