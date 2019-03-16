@@ -13,6 +13,7 @@ coursera_aml_cds/core
 *.gz
 
 coursera_aml_cds/pickled/*
+coursera_aml_cds/*.pickle
 
 
 **/.ipynb_checkpoints
