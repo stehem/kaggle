@@ -17,3 +17,5 @@ coursera_aml_cds/pickled/*
 
 
 **/.ipynb_checkpoints
+
+coursera_aml_cds/__pycache__/
