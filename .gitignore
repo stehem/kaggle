@@ -10,6 +10,8 @@ coursera_aml_cds/optimized_X
 coursera_aml_cds/training
 coursera_aml_cds/core
 coursera_aml_cds/*.pickle
+coursera_aml_cds/*.hdf5
+
 
 *.gz
 
