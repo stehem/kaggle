@@ -9,6 +9,8 @@ coursera_aml_cds/concatenated
 coursera_aml_cds/optimized_X
 coursera_aml_cds/training
 coursera_aml_cds/core
+coursera_aml_cds/__pycache__/
+coursera_aml_cds/lstm_best.hdf5
 
 *.gz
 
