@@ -1,0 +1,20 @@
+Give a short overview of most interesting parts of your solution, two-three sentences for each part. What do you think would be particularly interesting for others in your solution?
+
+Hi there and thanks for reviewing.
+
+I have included links to 4 models i worked on, the ones used for my solution are the two gbdt ones but i think the lstm and lr ones are interesting too. 
+
+I was never able to go under 1 with a single model, in the end i was able to reliably hit 1.02 with lightgbm and catboost, i got 1.04 with the lstm and 1.11 with a linear model. 
+I got 1.00 by ensembling the catboost 1.02 model with the 1.11 lr model and finally 0.98 by averaging the predictions of both the 1.02 gbdt models. Ensembling the 4 models did not yield anything interesting. Haven't really tried stacking, i have spent most the winter on this and many many hours and i am bit burnt out and glad this is over :)
+
+Here are the links to the models:
+
+- lgbm 1.02 https://github.com/stehem/kaggle/blob/fd62c15630c1471fff2d90a56469bea8d03a5eb5/coursera_aml_cds/project_1-gbdt.ipynb
+
+- lstm 1.04 https://github.com/stehem/kaggle/blob/0f77849e88bb302b361b7afddccfa439e9e0610f/coursera_aml_cds/project_1-lstm.ipynb
+
+- lr 1.11 https://github.com/stehem/kaggle/blob/762658e317496d539b792ee6fa1f436d5f02dfb7/coursera_aml_cds/project_1-lrv2.ipynb
+
+- catboost 1.02 https://github.com/stehem/kaggle/blob/0d9cd926156d999b31cf03b9dcd1e19dc32c419c/coursera_aml_cds/goddamit4.ipynb
+
+Some of those are very hungry in terms of RAM, had to buy 32GB of ram to work comfortably, 16GB was not cutting it, GPU is also more or less mandatory 
