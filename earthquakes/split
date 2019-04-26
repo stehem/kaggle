@@ -1,0 +1,2 @@
+tail -n +2 train.csv | split -l 150000
+
