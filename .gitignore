@@ -19,3 +19,4 @@ coursera_aml_cds/pickled/*
 
 **/.ipynb_checkpoints
 earthquakes/train
+**/__pycache__/
