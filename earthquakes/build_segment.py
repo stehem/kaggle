@@ -42,14 +42,26 @@ def build_segment_f(splits, number_of_groups,test=False):
             np.percentile(sub, 75),
             np.sum(sub),
             len(set(sub)),
-            len([a for a in sub if a > 0]),
-            len([a for a in sub if a < 0])
+            len(sub[sub > 0]),
+            len(sub[sub < 0]),
+            np.sum(np.abs(sub)),
+            #len(sub[sub > np.mean(sub)]),
+            #len(sub[sub < np.mean(sub)]),
+            np.argmax(sub),
+            np.argmin(sub),
+            #np.median(sub)
         ) for sub in acoustic_data])
         #target = df['time_to_failure'].values[-1]
         #
         df2 = pd.DataFrame(data)
         df2.columns = ["mean", "max", "min", "std", "abs", "q25", "q50", "q75",\
-                      "sum","uniq","pos","negs"]
+                      "sum","uniq",
+                       "pos","negs", 
+                       "ssum", 
+                       #"gtmean", "ltmean",\
+                      "imax", "imin", 
+                       #"median"
+                      ]
         
         if not test:
             target = df['time_to_failure'].values[-1]
