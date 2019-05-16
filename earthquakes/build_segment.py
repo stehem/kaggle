@@ -96,14 +96,14 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFra
         #np.median(sub),
         np.dot(sub,sub),
         np.sum(np.abs(np.ediff1d(sub))),
-        autocorrelation(sub,10),
-        cid_ce(sub,True),
-        kurtosis(sub),
-        np.mean(np.ediff1d(sub)),
-        percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
-        ratio_beyond_r_sigma(sub,2),
-        ratio_value_number_to_time_series_length(sub),
-        skewness(sub)
+        #autocorrelation(sub,10),
+        #cid_ce(sub,True),
+        #kurtosis(sub),
+        #np.mean(np.ediff1d(sub)),
+        #percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
+        #ratio_beyond_r_sigma(sub,2),
+        #ratio_value_number_to_time_series_length(sub),
+        #skewness(sub)
     ) for sub in acoustic_data])
 
     df2 = pd.DataFrame(data)
@@ -116,25 +116,26 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFra
                    #"median",
                    "abs_nrg",
                    "abs_sum_chg",
-                   "autocorr_10",
-                   "cid_ce",
-                   "kurtosis",
-                   "mean_chg",
-                   "reocurring_pct",
-                   "r_sigma",
-                   "ratio_to_length",
-                   "skewness"
+                   #"autocorr_10",
+                   #"cid_ce",
+                   #"kurtosis",
+                   #"mean_chg",
+                   #"reocurring_pct",
+                   #"r_sigma",
+                   #"ratio_to_length",
+                   #"skewness"
                   ]
 
 
     columns = df2.columns.values
     df2[columns] = StandardScaler().fit_transform(df2[columns])
-    df2['rolling_10'] = df2['mean'].rolling(window=10, min_periods=1).mean()
-    df2['rolling_25'] = df2['mean'].rolling(window=25, min_periods=1).mean()
-    df2['lag_10'] = df2['mean'].shift(10)
-    df2['lag_25'] = df2['mean'].shift(25)
+    #df2[columns] = MinMaxScaler(feature_range =(-1, 1)).fit_transform(df2[columns])
+    #df2['rolling_10'] = df2['mean'].rolling(window=10, min_periods=1).mean()
+    #df2['rolling_25'] = df2['mean'].rolling(window=25, min_periods=1).mean()
+    #df2['lag_10'] = df2['mean'].shift(10)
+    #df2['lag_25'] = df2['mean'].shift(25)
 
-    df2.fillna(df2.mean(),inplace=True)
+    #df2.fillna(df2.mean(),inplace=True)
     
     return df2
 
@@ -193,26 +194,4 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False):
 
             dfs.append(df3)
              
-    return dfs
-
-
-
-def build_segment_g(splits):
-    dfs = []
-    for i,segment in enumerate(splits):
-        #if i % 100 == 0:
-            #print(i)
-        path = 'train/%s' % (segment)
-        #
-        columns = ['acoustic_data','time_to_failure']
-        df = pd.read_csv(path, float_precision='round_trip', header=None)
-        if len(df) != SEGMENT_LENGTH:
-            print(segment)
-            continue
-        df.columns = columns
-        #
-        df['acoustic_data'] = pd.to_numeric(df['acoustic_data'], downcast='signed')
-        #last_n=int(SEGMENT_LENGTH/timesteps/4)
-     
-        dfs.append(df['acoustic_data'])                  
     return dfs
