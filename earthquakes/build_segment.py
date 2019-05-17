@@ -96,14 +96,14 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFra
         #np.median(sub),
         np.dot(sub,sub),
         np.sum(np.abs(np.ediff1d(sub))),
-        #autocorrelation(sub,10),
-        #cid_ce(sub,True),
-        #kurtosis(sub),
-        #np.mean(np.ediff1d(sub)),
-        #percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
-        #ratio_beyond_r_sigma(sub,2),
-        #ratio_value_number_to_time_series_length(sub),
-        #skewness(sub)
+        autocorrelation(sub,10),
+        cid_ce(sub,True),
+        kurtosis(sub),
+        np.mean(np.ediff1d(sub)),
+        percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
+        ratio_beyond_r_sigma(sub,2),
+        ratio_value_number_to_time_series_length(sub),
+        skewness(sub)
     ) for sub in acoustic_data])
 
     df2 = pd.DataFrame(data)
@@ -116,14 +116,14 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFra
                    #"median",
                    "abs_nrg",
                    "abs_sum_chg",
-                   #"autocorr_10",
-                   #"cid_ce",
-                   #"kurtosis",
-                   #"mean_chg",
-                   #"reocurring_pct",
-                   #"r_sigma",
-                   #"ratio_to_length",
-                   #"skewness"
+                   "autocorr_10",
+                   "cid_ce",
+                   "kurtosis",
+                   "mean_chg",
+                   "reocurring_pct",
+                   "r_sigma",
+                   "ratio_to_length",
+                   "skewness"
                   ]
 
 
@@ -139,8 +139,16 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFra
     
     return df2
 
-    
 
+def add_noise(df, pct):
+    mu = df['acoustic_data'].mean()
+    sigma = df['acoustic_data'].std()
+
+    indices = np.random.choice(df.index.values, int(len(df)*pct))
+    df.loc[indices, 'acoustic_data'] = np.random.normal(mu, sigma, len(indices)) 
+    return df
+
+NOISE = 0.5
 
 def build_segment_f(splits, number_of_groups,test=False, augment=False):
     dfs = []
@@ -180,10 +188,12 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False):
 
             previous_df = pd.read_csv(previous_path, float_precision='round_trip', header=header)
             previous_df.columns = columns
+            previous_df = add_noise(previous_df, NOISE)
 
             df_ = pd.DataFrame(previous_df[75000:150001].values)
             df_.columns = columns
-            df_ = df_.append(df[0:75000]).reset_index()
+            noise_df = add_noise(df, NOISE)
+            df_ = df_.append(noise_df[0:75000]).reset_index()
 
             df3 = build_training_sample(df_, number_of_groups)
 
