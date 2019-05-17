@@ -148,7 +148,7 @@ def add_noise(df, pct):
     df.loc[indices, 'acoustic_data'] = np.random.normal(mu, sigma, len(indices)) 
     return df
 
-NOISE = 0.5
+NOISE = 0.85
 
 def build_segment_f(splits, number_of_groups,test=False, augment=False):
     dfs = []
