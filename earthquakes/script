@@ -1,0 +1,5 @@
+#!/bin/bash
+
+for filename in train/*; do
+	wc -l $filename
+done
