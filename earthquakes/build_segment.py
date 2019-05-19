@@ -72,7 +72,7 @@ def skewness(x):
     return pd.Series.skew(x)
 
 
-def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFrame:
+def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) -> pd.DataFrame:
     acoustic_data = np.array_split(df['acoustic_data'].astype("float").values, number_of_groups)
 
     data = np.array([(
@@ -128,7 +128,8 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int) -> pd.DataFra
 
 
     columns = df2.columns.values
-    df2[columns] = StandardScaler().fit_transform(df2[columns])
+    if scale:
+        df2[columns] = StandardScaler().fit_transform(df2[columns])
     #df2[columns] = MinMaxScaler(feature_range =(-1, 1)).fit_transform(df2[columns])
     #df2['rolling_10'] = df2['mean'].rolling(window=10, min_periods=1).mean()
     #df2['rolling_25'] = df2['mean'].rolling(window=25, min_periods=1).mean()
@@ -148,9 +149,8 @@ def add_noise(df, pct):
     df.loc[indices, 'acoustic_data'] = np.random.normal(mu, sigma, len(indices)) 
     return df
 
-NOISE = 0.85
 
-def build_segment_f(splits, number_of_groups,test=False, augment=False):
+def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=True, noise=0.5):
     dfs = []
     splits = sorted(splits)
     
@@ -171,12 +171,13 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False):
         df = pd.read_csv(path, float_precision='round_trip', header=header)
         df.columns = columns
         #
-        df2 = build_training_sample(df, number_of_groups)
+        df2 = build_training_sample(df, number_of_groups, scale)
         
         if test:
             df2["seg_id"] = segment
         else:
             df2['time_to_failure'] = df['time_to_failure'].values[-1]
+            df2['augmented'] = False
             
         dfs.append(df2)
         
@@ -188,19 +189,20 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False):
 
             previous_df = pd.read_csv(previous_path, float_precision='round_trip', header=header)
             previous_df.columns = columns
-            previous_df = add_noise(previous_df, NOISE)
+            previous_df = add_noise(previous_df, noise)
 
             df_ = pd.DataFrame(previous_df[75000:150001].values)
             df_.columns = columns
             noise_df = add_noise(df, NOISE)
             df_ = df_.append(noise_df[0:75000]).reset_index()
 
-            df3 = build_training_sample(df_, number_of_groups)
+            df3 = build_training_sample(df_, number_of_groups, scale)
 
             if test:
                 df3["seg_id"] = segment
             else:
                 df3['time_to_failure'] = df_['time_to_failure'].values[-1]
+                df3['augmented'] = True
 
             dfs.append(df3)
              
