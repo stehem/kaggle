@@ -193,7 +193,7 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
 
             df_ = pd.DataFrame(previous_df[75000:150001].values)
             df_.columns = columns
-            noise_df = add_noise(df, NOISE)
+            noise_df = add_noise(df, noise)
             df_ = df_.append(noise_df[0:75000]).reset_index()
 
             df3 = build_training_sample(df_, number_of_groups, scale)
