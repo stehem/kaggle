@@ -301,8 +301,15 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
         sum_of_reoccurring_values(sub),
         sum_of_reoccurring_data_points(sub),
         ratio_value_number_to_time_series_length(sub),
-        number_peaks(sub,100),
-        #sample_entropy(sub)
+        number_peaks(sub,1000),
+        #sample_entropy(sub),
+        np.mean(sub[0:1000]),
+        np.mean(sub[-1000:]),
+        np.absolute(np.max(sub[-1000:]) - np.min(sub[0:1000])),
+        len(sub[0:1000][sub[0:1000] > 0]),
+        len(sub[0:1000][sub[0:1000] < 0]),
+        len(sub[-1000:][sub[-1000:] > 0]),
+        len(sub[-1000:][sub[-1000:] < 0]),
     ) for sub in acoustic_data])
 
     df2 = pd.DataFrame(data)
@@ -335,6 +342,13 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
                    "sum_reoccurr_dp",
                    "ratio_value_number",
                    "peaks",
+                   "mean_head",
+                   "mean_tail",
+                   "abs_diff_head_tail",
+                   "pos_head",
+                   "neg_head",
+                   "pos_tail",
+                   "neg_tail",
                    #"entropy"
                   ]
 
