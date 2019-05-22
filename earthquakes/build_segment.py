@@ -404,6 +404,7 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
         else:
             df2['time_to_failure'] = df['time_to_failure'].values[-1]
             df2['augmented'] = False
+            df2['segment'] = segment
             
         dfs.append(df2)
         

@@ -21,3 +21,6 @@ coursera_aml_cds/pickled/*
 earthquakes/train
 **/__pycache__/
 **/*.hdf5
+**/*.pickle
+**/*.npy
+**/*_model
