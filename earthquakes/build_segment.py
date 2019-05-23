@@ -262,6 +262,7 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
     acoustic_data = np.array_split(df['acoustic_data'].astype("float").values, number_of_groups)
 
     data = np.array([(
+        np.median(sub),
         np.mean(sub),
         np.max(sub),
         np.min(sub),
@@ -290,18 +291,18 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
         ratio_beyond_r_sigma(sub,2),
         ratio_value_number_to_time_series_length(sub),
         skewness(sub),
-        longest_strike_below_mean(sub),
-        longest_strike_above_mean(sub),
-        last_location_of_maximum(sub),
-        first_location_of_maximum(sub),
-        last_location_of_minimum(sub),
-        first_location_of_minimum(sub),
+        #longest_strike_below_mean(sub),
+        #longest_strike_above_mean(sub),
+        #last_location_of_maximum(sub),
+        #first_location_of_maximum(sub),
+        #last_location_of_minimum(sub),
+        #first_location_of_minimum(sub),
         percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
         percentage_of_reoccurring_values_to_all_values(sub),
         sum_of_reoccurring_values(sub),
         sum_of_reoccurring_data_points(sub),
-        ratio_value_number_to_time_series_length(sub),
-        number_peaks(sub,1000),
+        #ratio_value_number_to_time_series_length(sub),
+        #number_peaks(sub,1000),
         #sample_entropy(sub),
         np.mean(sub[0:1000]),
         np.mean(sub[-1000:]),
@@ -313,7 +314,7 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
     ) for sub in acoustic_data])
 
     df2 = pd.DataFrame(data)
-    df2.columns = ["mean", "max", "min", "std", "abs", "q25", "q50", "q75",\
+    df2.columns = ["median", "mean", "max", "min", "std", "abs", "q25", "q50", "q75",\
                   "sum","uniq",
                    "pos","negs", 
                    "ssum", 
@@ -330,18 +331,18 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
                    "r_sigma",
                    "ratio_to_length",
                    "skewness",
-                   "strike_below",
-                   "strike_above",
-                   "last_loc_max",
-                   "first_loc_max",
-                   "last_loc_min",
-                   "first_loc_min",
+                   #"strike_below",
+                   #"strike_above",
+                   #"last_loc_max",
+                   #"first_loc_max",
+                   #"last_loc_min",
+                   #"first_loc_min",
                    "perc_reocurr_dp",
                    "perc_reocurr_all",
                    "sum_reoccurr_val",
                    "sum_reoccurr_dp",
-                   "ratio_value_number",
-                   "peaks",
+                   #"ratio_value_number",
+                   #"peaks",
                    "mean_head",
                    "mean_tail",
                    "abs_diff_head_tail",
@@ -376,7 +377,7 @@ def add_noise(df, pct):
     return df
 
 
-def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=True, noise=0.5):
+def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=True, noise=0.5, smart_augment=False):
     dfs = []
     splits = sorted(splits)
     
@@ -424,13 +425,39 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
             df_ = df_.append(noise_df[0:75000]).reset_index()
 
             df3 = build_training_sample(df_, number_of_groups, scale)
-
-            if test:
-                df3["seg_id"] = segment
-            else:
-                df3['time_to_failure'] = df_['time_to_failure'].values[-1]
-                df3['augmented'] = True
+            df3['time_to_failure'] = df_['time_to_failure'].values[-1]
+            df3['augmented'] = True
 
             dfs.append(df3)
+            
+        if smart_augment and not test and i > 0:
+        
+            df_ttf = df['time_to_failure'].values[-1]
+            if df_ttf < 10:
+                continue
+                         
+            
+            if df_ttf < 12:
+                 for i in range(0,1):
+                        noisy = add_noise(df, noise)
+                        noisy = build_training_sample(noisy, number_of_groups, scale)
+                        noisy['time_to_failure'] = df['time_to_failure'].values[-1]
+                        noisy['augmented'] = True
+                        dfs.append(noisy)
+                        
+            elif df_ttf < 14:
+                 for i in range(0,4):
+                        noisy = add_noise(df, noise)
+                        noisy = build_training_sample(noisy, number_of_groups, scale)
+                        noisy['time_to_failure'] = df['time_to_failure'].values[-1]
+                        noisy['augmented'] = True
+                        dfs.append(noisy)
+            else:
+                 for i in range(0,10):
+                        noisy = add_noise(df, noise)
+                        noisy = build_training_sample(noisy, number_of_groups, scale)
+                        noisy['time_to_failure'] = df['time_to_failure'].values[-1]
+                        noisy['augmented'] = True
+                        dfs.append(noisy)
              
     return dfs
