@@ -259,101 +259,110 @@ def sample_entropy(x):
 
 
 def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) -> pd.DataFrame:
-    acoustic_data = np.array_split(df['acoustic_data'].astype("float").values, number_of_groups)
+    features = ['acoustic_data','roll_1000', 'roll_diff']
+    all_dfs = []
 
-    data = np.array([(
-        np.median(sub),
-        np.mean(sub),
-        np.max(sub),
-        np.min(sub),
-        np.std(sub),
-        np.absolute(np.max(sub) - np.min(sub)),
-        np.percentile(sub, 25),
-        np.percentile(sub, 50),
-        np.percentile(sub, 75),
-        np.sum(sub),
-        len(set(sub)),
-        len(sub[sub > 0]),
-        len(sub[sub < 0]),
-        np.sum(np.abs(sub)),
-        #len(sub[sub > np.mean(sub)]),
-        #len(sub[sub < np.mean(sub)]),
-        np.argmax(sub),
-        np.argmin(sub),
-        #np.median(sub),
-        np.dot(sub,sub),
-        np.sum(np.abs(np.ediff1d(sub))),
-        autocorrelation(sub,10),
-        cid_ce(sub,True),
-        kurtosis(sub),
-        np.mean(np.ediff1d(sub)),
-        percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
-        ratio_beyond_r_sigma(sub,2),
-        ratio_value_number_to_time_series_length(sub),
-        skewness(sub),
-        #longest_strike_below_mean(sub),
-        #longest_strike_above_mean(sub),
-        #last_location_of_maximum(sub),
-        #first_location_of_maximum(sub),
-        #last_location_of_minimum(sub),
-        #first_location_of_minimum(sub),
-        percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
-        percentage_of_reoccurring_values_to_all_values(sub),
-        sum_of_reoccurring_values(sub),
-        sum_of_reoccurring_data_points(sub),
-        #ratio_value_number_to_time_series_length(sub),
-        #number_peaks(sub,1000),
-        #sample_entropy(sub),
-        np.mean(sub[0:1000]),
-        np.mean(sub[-1000:]),
-        np.absolute(np.max(sub[-1000:]) - np.min(sub[0:1000])),
-        len(sub[0:1000][sub[0:1000] > 0]),
-        len(sub[0:1000][sub[0:1000] < 0]),
-        len(sub[-1000:][sub[-1000:] > 0]),
-        len(sub[-1000:][sub[-1000:] < 0]),
-    ) for sub in acoustic_data])
+    for feature in features:
+      
+        acoustic_data = np.array_split(df[feature].astype("float").values, number_of_groups)
 
-    df2 = pd.DataFrame(data)
-    df2.columns = ["median", "mean", "max", "min", "std", "abs", "q25", "q50", "q75",\
-                  "sum","uniq",
-                   "pos","negs", 
-                   "ssum", 
-                   #"gtmean", "ltmean",\
-                  "imax", "imin", 
-                   #"median",
-                   "abs_nrg",
-                   "abs_sum_chg",
-                   "autocorr_10",
-                   "cid_ce",
-                   "kurtosis",
-                   "mean_chg",
-                   "reocurring_pct",
-                   "r_sigma",
-                   "ratio_to_length",
-                   "skewness",
-                   #"strike_below",
-                   #"strike_above",
-                   #"last_loc_max",
-                   #"first_loc_max",
-                   #"last_loc_min",
-                   #"first_loc_min",
-                   "perc_reocurr_dp",
-                   "perc_reocurr_all",
-                   "sum_reoccurr_val",
-                   "sum_reoccurr_dp",
-                   #"ratio_value_number",
-                   #"peaks",
-                   "mean_head",
-                   "mean_tail",
-                   "abs_diff_head_tail",
-                   "pos_head",
-                   "neg_head",
-                   "pos_tail",
-                   "neg_tail",
-                   #"entropy"
-                  ]
+        data = np.array([(
+            np.median(sub),
+            np.mean(sub),
+            np.max(sub),
+            np.min(sub),
+            np.std(sub),
+            np.absolute(np.max(sub) - np.min(sub)),
+            np.percentile(sub, 25),
+            np.percentile(sub, 50),
+            np.percentile(sub, 75),
+            np.sum(sub),
+            len(set(sub)),
+            len(sub[sub > 0]),
+            len(sub[sub < 0]),
+            np.sum(np.abs(sub)),
+            #len(sub[sub > np.mean(sub)]),
+            #len(sub[sub < np.mean(sub)]),
+            np.argmax(sub),
+            np.argmin(sub),
+            #np.median(sub),
+            np.dot(sub,sub),
+            np.sum(np.abs(np.ediff1d(sub))),
+            autocorrelation(sub,10),
+            cid_ce(sub,True),
+            kurtosis(sub),
+            np.mean(np.ediff1d(sub)),
+            percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
+            ratio_beyond_r_sigma(sub,2),
+            ratio_value_number_to_time_series_length(sub),
+            skewness(sub),
+            #longest_strike_below_mean(sub),
+            #longest_strike_above_mean(sub),
+            #last_location_of_maximum(sub),
+            #first_location_of_maximum(sub),
+            #last_location_of_minimum(sub),
+            #first_location_of_minimum(sub),
+            percentage_of_reoccurring_datapoints_to_all_datapoints(sub),
+            percentage_of_reoccurring_values_to_all_values(sub),
+            sum_of_reoccurring_values(sub),
+            sum_of_reoccurring_data_points(sub),
+            #ratio_value_number_to_time_series_length(sub),
+            #number_peaks(sub,1000),
+            #sample_entropy(sub),
+            np.mean(sub[0:1000]),
+            np.mean(sub[-1000:]),
+            np.absolute(np.max(sub[-1000:]) - np.min(sub[0:1000])),
+            len(sub[0:1000][sub[0:1000] > 0]),
+            len(sub[0:1000][sub[0:1000] < 0]),
+            len(sub[-1000:][sub[-1000:] > 0]),
+            len(sub[-1000:][sub[-1000:] < 0]),
+        ) for sub in acoustic_data])
 
+        dff = pd.DataFrame(data)
 
+        dff.columns = [f"{feature}_median", f"{feature}_mean", f"{feature}_max", f"{feature}_min", f"{feature}_std", 
+                       f"{feature}_abs", f"{feature}_q25", f"{feature}_q50", f"{feature}_q75",\
+                      f"{feature}_sum",f"{feature}_uniq",
+                       f"{feature}_pos",f"{feature}_negs", 
+                       f"{feature}_ssum", 
+                       #"gtmean", "ltmean",\
+                      f"{feature}_imax", f"{feature}_imin", 
+                       #"median",
+                       f"{feature}_abs_nrg",
+                       f"{feature}_abs_sum_chg",
+                       f"{feature}_autocorr_10",
+                       f"{feature}_cid_ce",
+                       f"{feature}_kurtosis",
+                       f"{feature}_mean_chg",
+                       f"{feature}_reocurring_pct",
+                       f"{feature}_r_sigma",
+                       f"{feature}_ratio_to_length",
+                       f"{feature}_skewness",
+                       #"strike_below",
+                       #"strike_above",
+                       #"last_loc_max",
+                       #"first_loc_max",
+                       #"last_loc_min",
+                       #"first_loc_min",
+                       f"{feature}_perc_reocurr_dp",
+                       f"{feature}_perc_reocurr_all",
+                       f"{feature}_sum_reoccurr_val",
+                       f"{feature}_sum_reoccurr_dp",
+                       #"ratio_value_number",
+                       #"peaks",
+                       f"{feature}_mean_head",
+                       f"{feature}_mean_tail",
+                       f"{feature}_abs_diff_head_tail",
+                       f"{feature}_pos_head",
+                       f"{feature}_neg_head",
+                       f"{feature}_pos_tail",
+                       f"{feature}_neg_tail",
+                       #"entropy"
+                      ]
+
+        all_dfs.append(dff)
+    
+    df2 = pd.concat(all_dfs, axis=1)
     columns = df2.columns.values
     if scale:
         df2[columns] = StandardScaler().fit_transform(df2[columns])
@@ -397,6 +406,12 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
         
         df = pd.read_csv(path, float_precision='round_trip', header=header)
         df.columns = columns
+        #
+        df['roll_1000'] = df['acoustic_data'].rolling(1000,min_periods=1000).mean()
+        df['roll_1000'].fillna(df['roll_1000'][1000],inplace=True)
+        df['shifted'] = df['roll_1000'].shift(1)
+        df['shifted'].fillna(df['roll_1000'][1000],inplace=True)
+        df["roll_diff"] = df['shifted'] - df['roll_1000']
         #
         df2 = build_training_sample(df, number_of_groups, scale)
         
