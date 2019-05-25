@@ -259,7 +259,7 @@ def sample_entropy(x):
 
 
 def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) -> pd.DataFrame:
-    features = ['acoustic_data','roll_1000', 'roll_diff']
+    features = ['acoustic_data','roll_diff_1']
     all_dfs = []
 
     for feature in features:
@@ -309,13 +309,13 @@ def build_training_sample(df: pd.DataFrame, number_of_groups: int, scale: bool) 
             #ratio_value_number_to_time_series_length(sub),
             #number_peaks(sub,1000),
             #sample_entropy(sub),
-            np.mean(sub[0:1000]),
-            np.mean(sub[-1000:]),
-            np.absolute(np.max(sub[-1000:]) - np.min(sub[0:1000])),
-            len(sub[0:1000][sub[0:1000] > 0]),
-            len(sub[0:1000][sub[0:1000] < 0]),
-            len(sub[-1000:][sub[-1000:] > 0]),
-            len(sub[-1000:][sub[-1000:] < 0]),
+            np.mean(sub[0:25000]),
+            np.mean(sub[-25000:]),
+            np.absolute(np.max(sub[-25000:]) - np.min(sub[0:25000])),
+            len(sub[0:25000][sub[0:25000] > 0]),
+            len(sub[0:25000][sub[0:25000] < 0]),
+            len(sub[-25000:][sub[-25000:] > 0]),
+            len(sub[-25000:][sub[-25000:] < 0]),
         ) for sub in acoustic_data])
 
         dff = pd.DataFrame(data)
@@ -409,9 +409,12 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
         #
         df['roll_1000'] = df['acoustic_data'].rolling(1000,min_periods=1000).mean()
         df['roll_1000'].fillna(df['roll_1000'][1000],inplace=True)
-        df['shifted'] = df['roll_1000'].shift(1)
-        df['shifted'].fillna(df['roll_1000'][1000],inplace=True)
-        df["roll_diff"] = df['shifted'] - df['roll_1000']
+        df['shifted_1'] = df['roll_1000'].shift(1)
+        df['shifted_1'].fillna(df['roll_1000'][1000],inplace=True)
+        df["roll_diff_1"] = df['shifted_1'] - df['roll_1000']
+        #df['shifted_1000'] = df['roll_1000'].shift(1000)
+        #df['shifted_1000'].fillna(df['roll_1000'][1000],inplace=True)
+        #df["roll_diff_1000"] = df['shifted_1000'] - df['roll_1000']
         #
         df2 = build_training_sample(df, number_of_groups, scale)
         
@@ -420,7 +423,7 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
         else:
             df2['time_to_failure'] = df['time_to_failure'].values[-1]
             df2['augmented'] = False
-            df2['segment'] = segment
+            #df2['segment'] = segment
             
         dfs.append(df2)
         
@@ -432,16 +435,29 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
 
             previous_df = pd.read_csv(previous_path, float_precision='round_trip', header=header)
             previous_df.columns = columns
+
             previous_df = add_noise(previous_df, noise)
+            previous_df['roll_1000'] = previous_df['acoustic_data'].rolling(1000,min_periods=1000).mean()
+            previous_df['roll_1000'].fillna(previous_df['roll_1000'][1000],inplace=True)
+            previous_df['shifted_1'] = previous_df['roll_1000'].shift(1)
+            previous_df['shifted_1'].fillna(previous_df['roll_1000'][1000],inplace=True)
+            previous_df["roll_diff_1"] = previous_df['shifted_1'] - previous_df['roll_1000']
 
             df_ = pd.DataFrame(previous_df[75000:150001].values)
-            df_.columns = columns
+            df_.columns = previous_df.columns
             noise_df = add_noise(df, noise)
+            noise_df['roll_1000'] = noise_df['acoustic_data'].rolling(1000,min_periods=1000).mean()
+            noise_df['roll_1000'].fillna(noise_df['roll_1000'][1000],inplace=True)
+            noise_df['shifted_1'] = noise_df['roll_1000'].shift(1)
+            noise_df['shifted_1'].fillna(noise_df['roll_1000'][1000],inplace=True)
+            noise_df["roll_diff_1"] = noise_df['shifted_1'] - noise_df['roll_1000']
             df_ = df_.append(noise_df[0:75000]).reset_index()
 
             df3 = build_training_sample(df_, number_of_groups, scale)
             df3['time_to_failure'] = df_['time_to_failure'].values[-1]
             df3['augmented'] = True
+            #df3['segment'] = segment
+
 
             dfs.append(df3)
             
@@ -455,6 +471,11 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
             if df_ttf < 12:
                  for i in range(0,1):
                         noisy = add_noise(df, noise)
+                        noisy['roll_1000'] = noisy['acoustic_data'].rolling(1000,min_periods=1000).mean()
+                        noisy['roll_1000'].fillna(noisy['roll_1000'][1000],inplace=True)
+                        noisy['shifted_1'] = noisy['roll_1000'].shift(1)
+                        noisy['shifted_1'].fillna(noisy['roll_1000'][1000],inplace=True)
+                        noisy["roll_diff_1"] = noisy['shifted_1'] - noisy['roll_1000']
                         noisy = build_training_sample(noisy, number_of_groups, scale)
                         noisy['time_to_failure'] = df['time_to_failure'].values[-1]
                         noisy['augmented'] = True
@@ -463,6 +484,11 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
             elif df_ttf < 14:
                  for i in range(0,4):
                         noisy = add_noise(df, noise)
+                        noisy['roll_1000'] = noisy['acoustic_data'].rolling(1000,min_periods=1000).mean()
+                        noisy['roll_1000'].fillna(noisy['roll_1000'][1000],inplace=True)
+                        noisy['shifted_1'] = noisy['roll_1000'].shift(1)
+                        noisy['shifted_1'].fillna(noisy['roll_1000'][1000],inplace=True)
+                        noisy["roll_diff_1"] = noisy['shifted_1'] - noisy['roll_1000']
                         noisy = build_training_sample(noisy, number_of_groups, scale)
                         noisy['time_to_failure'] = df['time_to_failure'].values[-1]
                         noisy['augmented'] = True
@@ -470,6 +496,11 @@ def build_segment_f(splits, number_of_groups,test=False, augment=False, scale=Tr
             else:
                  for i in range(0,10):
                         noisy = add_noise(df, noise)
+                        noisy['roll_1000'] = noisy['acoustic_data'].rolling(1000,min_periods=1000).mean()
+                        noisy['roll_1000'].fillna(noisy['roll_1000'][1000],inplace=True)
+                        noisy['shifted_1'] = noisy['roll_1000'].shift(1)
+                        noisy['shifted_1'].fillna(noisy['roll_1000'][1000],inplace=True)
+                        noisy["roll_diff_1"] = noisy['shifted_1'] - noisy['roll_1000']
                         noisy = build_training_sample(noisy, number_of_groups, scale)
                         noisy['time_to_failure'] = df['time_to_failure'].values[-1]
                         noisy['augmented'] = True
